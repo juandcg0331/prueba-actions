@@ -27,7 +27,7 @@ jobs:
       - name: Read JSON file and process dates
         run: |
           echo "Reading dates.json"
-          dates=$(jq -r '.dates[]' data.json)
+          dates=$(jq -r '.dates[]' dates.json)
 
           # Crear el directorio para almacenar las respuestas si no existe
           mkdir -p nasa_responses
