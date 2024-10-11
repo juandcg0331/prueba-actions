@@ -33,6 +33,10 @@ jobs:
             echo "Making request to: $api_url"
             
             response=$(curl -s -w "%{http_code}" -o response.json "$api_url")
+
+             # Imprimir la respuesta
+            echo "Response for date $date:"
+            cat response.json
             
             if [ "$response" -eq 200 ]; then
               echo "Response for date $date saved."
