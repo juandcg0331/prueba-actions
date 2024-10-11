@@ -1,28 +1,31 @@
-name: pipeline prueba
+name: Process Dates and Call NASA API
+
 on:
   push:
-    branches: 
-        - master
+    branches:
+      - main
+
 jobs:
-  prueba_download_image:
+  call-nasa-api:
     runs-on: ubuntu-latest
 
     steps:
-        - name: Checkout repository
-          uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
-        - name: read JSON file
-          id: read-json
-          uses: actions/github-script@v4
-          with:
-                script: |
-                 const fs = require('fs');
-                 const file = fs.readFileSync('dates.json'. 'utf8');
-                 const data = JSON.parse(file);
+      - name: Install jq
+        run: sudo apt-get install jq
 
-                 console.log(data);
+      - name: Read JSON file and process dates
+        run: |
+          echo "Reading data.json"
+          dates=$(jq -r '.dates[]' data.json)
 
-                 return data;
-        - name: use JSON data
-          run: echo "The application tag is ${{ steps.read-json.outputs.result.tag}}"
-        
+          # Iterar sobre cada fecha y hacer la petición a la API de la NASA
+          for date in $dates; do
+            url="https://api.nasa.gov/planetary/apod?api_key=${{ secrets.API_KEY }}&date=$date"
+            echo "Making request to: $url"
+            response=$(curl -s "$url")
+            echo "Response for date $date:"
+            echo "$response"
+          done
