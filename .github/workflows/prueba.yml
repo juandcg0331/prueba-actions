@@ -2,7 +2,7 @@ name: pipeline prueba
 on:
   push:
     branches: 
-        - main
+        - master
 jobs:
   prueba_download_image:
     runs-on: ubuntu-latest
