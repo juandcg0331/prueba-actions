@@ -22,14 +22,14 @@ jobs:
         id: get_dates
         run: |
           dates=$(jq -r '.dates | @csv' dates.json)
-          echo "dates=$dates" >> $GITHUB_ENV
+          echo "dates=${dates}" >> $GITHUB_ENV
 
   process_dates:
     runs-on: ubuntu-latest
     needs: get_dates
     strategy:
       matrix:
-        date: ${{ fromJson(env.dates | toJson) }}
+        date: ${{ fromJson(env.dates) }}
 
     steps:
       - name: Process each date
