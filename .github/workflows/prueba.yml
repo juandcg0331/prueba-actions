@@ -16,16 +16,34 @@ jobs:
       - name: Install jq
         run: sudo apt-get install jq
 
+      - name: Cache API responses
+        uses: actions/cache@v3
+        with:
+          path: ./nasa_responses
+          key: nasa-responses-${{ runner.os }}-${{ hashFiles('dates.json') }}
+          restore-keys: |
+            nasa-responses-${{ runner.os }}-
+
       - name: Read JSON file and process dates
         run: |
           echo "Reading dates.json"
-          dates=$(jq -r '.dates[]' dates.json)
+          dates=$(jq -r '.dates[]' data.json)
+
+          # Crear el directorio para almacenar las respuestas si no existe
+          mkdir -p nasa_responses
 
           # Iterar sobre cada fecha y hacer la petición a la API de la NASA
           for date in $dates; do
             url="https://api.nasa.gov/planetary/apod?api_key=${{ secrets.API_KEY }}&date=$date"
             echo "Making request to: $url"
             response=$(curl -s "$url")
-            echo "Response for date $date:"
-            echo "$response"
+            
+            # Almacenar la respuesta en un archivo
+            echo "$response" > "nasa_responses/response_$date.json"
+            echo "Response for date $date saved."
           done
+
+      - name: List cached responses
+        run: |
+          echo "Cached responses:"
+          ls nasa_responses
