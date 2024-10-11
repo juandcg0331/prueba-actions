@@ -3,7 +3,7 @@ name: Process Dates
 on:
   push:
     branches:
-      - master  # Cambia esto si es necesario
+      - master
 
 jobs:
   get_dates:
@@ -21,18 +21,41 @@ jobs:
       - name: Read dates from JSON
         id: get_dates
         run: |
-          dates=$(jq -r '.dates | @csv' dates.json)
-          echo "dates=${dates}" >> $GITHUB_ENV
+          dates=$(jq -r '.dates[]' dates.json)
+          echo "::set-output name=dates::$dates"
 
   process_dates:
     runs-on: ubuntu-latest
     needs: get_dates
     strategy:
       matrix:
-        date: ${{ fromJson(env.dates) }}
+        date: ${{ fromJson(needs.get_dates.outputs.dates) }}
 
     steps:
-      - name: Process each date
+      - name: Check cache for date
+        id: cache_check
         run: |
-          echo "Procesando fecha: ${{ matrix.date }}"
-          # Aquí puedes añadir la lógica que necesites para procesar cada fecha
+          echo "date=${{ matrix.date }}" >> $GITHUB_ENV
+          if [ -f "cache/${{ matrix.date }}.json" ]; then
+            echo "Cache hit for date: ${{ matrix.date }}"
+            cat "cache/${{ matrix.date }}.json"
+          else
+            echo "Cache miss for date: ${{ matrix.date }}"
+            API_KEY=${{ secrets.API_KEY }}
+            response=$(curl -s "https://api.nasa.gov/planetary/apod?api_key=$API_KEY&date=${{ matrix.date }}")
+            echo $response > "cache/${{ matrix.date }}.json"
+            echo $response
+          fi
+
+      - name: Download image
+        run: |
+          response=$(cat "cache/${{ matrix.date }}.json")
+          image_url=$(echo $response | jq -r '.url')
+          echo "Downloading image from: $image_url"
+          curl -o "img-${{ matrix.date }}.jpg" "$image_url"
+
+      - name: Upload image as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: img-${{ matrix.date }}
+          path: img-${{ matrix.date }}.jpg
