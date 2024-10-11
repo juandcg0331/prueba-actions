@@ -21,7 +21,7 @@ jobs:
         run: |
           echo "Reading dates.json"
           dates=$(jq -r '.dates[]' dates.json)
-          echo "::set-output name=dates::$dates"
+          echo "dates=$dates" >> $GITHUB_OUTPUT
 
   call-nasa-api:
     needs: cache-api-responses
