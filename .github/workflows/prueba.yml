@@ -19,7 +19,7 @@ jobs:
       - name: Read JSON file and process dates
         run: |
           echo "Reading dates.json"
-          dates=$(jq -r '.dates[]' data.json)
+          dates=$(jq -r '.dates[]' dates.json)
 
           # Iterar sobre cada fecha y hacer la petición a la API de la NASA
           for date in $dates; do
