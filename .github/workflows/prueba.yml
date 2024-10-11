@@ -3,7 +3,7 @@ name: Process Dates and Call NASA API
 on:
   push:
     branches:
-      - main
+      - master
 
 jobs:
   call-nasa-api:
