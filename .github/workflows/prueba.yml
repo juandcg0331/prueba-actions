@@ -3,7 +3,7 @@ name: Process Dates
 on:
   push:
     branches:
-      - main  # Cambia esto si es necesario
+      - master  # Cambia esto si es necesario
 
 jobs:
   get_dates:
@@ -22,14 +22,14 @@ jobs:
         id: get_dates
         run: |
           dates=$(jq -r '.dates | @csv' dates.json)
-          echo "dates=${dates}" >> $GITHUB_ENV
+          echo "dates=$dates" >> $GITHUB_ENV
 
   process_dates:
     runs-on: ubuntu-latest
     needs: get_dates
     strategy:
       matrix:
-        date: [${{ env.dates }}]
+        date: ${{ fromJson(env.dates | toJson) }}
 
     steps:
       - name: Process each date
