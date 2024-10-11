@@ -57,7 +57,10 @@ jobs:
               echo "Image downloaded as img-$date.jpg"
             fi
           done
-
+      
+      - name: List images
+        run: ls -la img-*.jpg
+        
       - name: Upload images as artifacts
         uses: actions/upload-artifact@v3
         with:
