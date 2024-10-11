@@ -6,7 +6,7 @@ on:
       - master
 
 jobs:
-  cache-api-responses:
+  process-nasa-data:
     runs-on: ubuntu-latest
 
     steps:
@@ -21,29 +21,15 @@ jobs:
         run: |
           echo "Reading dates.json"
           dates=$(jq -r '.dates[]' dates.json)
-          echo "dates=$dates" >> $GITHUB_OUTPUT
-
-  call-nasa-api:
-    needs: cache-api-responses
-    runs-on: ubuntu-latest
-    outputs:
-      dates: ${{ steps.get_dates.outputs.dates }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Read dates from output
-        id: get_dates
-        run: |
-          echo "dates=(${{ needs.cache-api-responses.outputs.dates }})" >> $GITHUB_ENV
+          echo "::set-output name=dates::$dates"
 
       - name: Call NASA API for each date
         id: api_request
         run: |
           mkdir -p nasa_responses
-          for date in ${dates[@]}; do
+          for date in ${{ steps.get_dates.outputs.dates }}; do
             # Make API request
-            api_url="https://api.nasa.gov/planetary/apod?api_key=${{ secrets.API_KEY }}&date=$date"
+            api_url="https://api.nasa.gov/planetary/apod?api_key=${{ secrets.MY_SECRET }}&date=$date"
             echo "Making request to: $api_url"
             
             response=$(curl -s -w "%{http_code}" -o response.json "$api_url")
@@ -57,16 +43,9 @@ jobs:
             fi
           done
 
-  download-images:
-    needs: call-nasa-api
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
       - name: Download images
         run: |
-          for date in ${dates[@]}; do
+          for date in ${{ steps.get_dates.outputs.dates }}; do
             if [ -f "nasa_responses/response_$date.json" ]; then
               image_url=$(jq -r '.url' "nasa_responses/response_$date.json")
               echo "Downloading image from: $image_url"
@@ -75,22 +54,11 @@ jobs:
             fi
           done
 
-  upload-artifacts:
-    needs: download-images
-    runs-on: ubuntu-latest
-    steps:
       - name: Upload images as artifacts
         uses: actions/upload-artifact@v3
         with:
           name: images
           path: img-*.jpg
-
-  store-in-cache:
-    needs: call-nasa-api
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
 
       - name: Cache API responses
         uses: actions/cache@v3
