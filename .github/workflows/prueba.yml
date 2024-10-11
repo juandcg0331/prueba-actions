@@ -1,4 +1,4 @@
-name: Process Dates
+name: Prueba segundo taller
 
 on:
   push:
@@ -6,56 +6,72 @@ on:
       - master
 
 jobs:
-  get_dates:
+  proceso-fechas-api-nasa:
     runs-on: ubuntu-latest
-    outputs:
-      dates: ${{ steps.get_dates.outputs.dates }}
 
     steps:
-      - name: Check out the code
+      - name: Checkout repository
         uses: actions/checkout@v2
 
       - name: Install jq
         run: sudo apt-get install jq
 
-      - name: Read dates from JSON
+      - name: Leyendo archivo JSON y obteniendo fechas
         id: get_dates
         run: |
+          echo "Leyendo dates.json"
           dates=$(jq -r '.dates[]' dates.json)
           echo "::set-output name=dates::$dates"
 
-  process_dates:
-    runs-on: ubuntu-latest
-    needs: get_dates
-    strategy:
-      matrix:
-        date: ${{ fromJson(needs.get_dates.outputs.dates) }}
-
-    steps:
-      - name: Check cache for date
-        id: cache_check
+      - name: Peticiones al API de la NASA por cada fecha
         run: |
-          echo "date=${{ matrix.date }}" >> $GITHUB_ENV
-          if [ -f "cache/${{ matrix.date }}.json" ]; then
-            echo "Cache hit for date: ${{ matrix.date }}"
-            cat "cache/${{ matrix.date }}.json"
-          else
-            echo "Cache miss for date: ${{ matrix.date }}"
-            API_KEY=${{ secrets.API_KEY }}
-            response=$(curl -s "https://api.nasa.gov/planetary/apod?api_key=$API_KEY&date=${{ matrix.date }}")
-            echo $response > "cache/${{ matrix.date }}.json"
-            echo $response
-          fi
+          mkdir -p nasa_responses
+          for date in ${{ steps.get_dates.outputs.dates }}; do
+            # Peticion GET al API
+            api_url="https://api.nasa.gov/planetary/apod?api_key=${{ secrets.API_KEY }}&date=$date"
+            echo "Peticion request a : $api_url"
+            
+            response=$(curl -s -w "%{http_code}" -o response.json "$api_url")
 
-      - name: Download image
+             # Imprimir la respuesta
+            echo "Respuesta de la fecha $date:"
+            cat response.json
+            
+            if [ "$response" -eq 200 ]; then
+              echo "Respuesta para la fecha $date , Guardado."
+              mv response.json "nasa_responses/response_$date.json"
+            else
+              echo "Error: Respuesta de la peticion con status $response para la fecha $date. Saltando peticion."
+              rm response.json
+            fi
+          done
+
+      - name: Descargando imagenes
         run: |
-          response=$(cat "cache/${{ matrix.date }}.json")
-          image_url=$(echo $response | jq -r '.url')
-          echo "Downloading image from: $image_url"
-          curl -o "img-${{ matrix.date }}.jpg" "$image_url"
-
-      - name: Upload image as artifact
+          for date in ${{ steps.get_dates.outputs.dates }}; do
+            if [ -f "nasa_responses/response_$date.json" ]; then
+              image_url=$(jq -r '.url' "nasa_responses/response_$date.json")
+              echo "Descargando imagenes desde : $image_url"
+              curl -s -o "img-$date.jpg" "$image_url"
+              echo "Imagen descargada como img-$date.jpg"
+            fi
+          done
+        
+      - name: Cargando imagenes como artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: img-${{ matrix.date }}
-          path: img-${{ matrix.date }}.jpg
+          name: images
+          path: img-*.jpg
+
+      - name: Cache respuestas del API
+        uses: actions/cache@v3
+        with:
+          path: ./nasa_responses
+          key: nasa-responses-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            nasa-responses-${{ runner.os }}-
+
+      - name: Listando Cache respuestas del API
+        run: |
+          echo "Respuestas cache:"
+          ls nasa_responses
