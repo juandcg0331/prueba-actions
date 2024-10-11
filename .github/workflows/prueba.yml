@@ -1,0 +1,28 @@
+name: pipeline prueba
+on:
+  push:
+    branches: 
+        - main
+jobs:
+  prueba_download_image:
+    runs-on: ubuntu-latest
+
+    steps:
+        - name: Checkout repository
+          uses: actions/checkout@v2
+
+        - name: read JSON file
+          id: read-json
+          uses: actions/github-script@v4
+          with:
+                script: |
+                 const fs = require('fs');
+                 const file = fs.readFileSync('dates.json'. 'utf8');
+                 const data = JSON.parse(file);
+
+                 console.log(data);
+
+                 return data;
+        - name: use JSON data
+          run: echo "The application tag is ${{ steps.read-json.outputs.result.tag}}"
+        
