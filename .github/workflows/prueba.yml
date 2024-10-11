@@ -48,7 +48,7 @@ jobs:
             fi
 
             # Make API request
-            api_url="https://api.nasa.gov/planetary/apod?api_key=${{ secrets.MY_SECRET }}&date=$date"
+            api_url="https://api.nasa.gov/planetary/apod?api_key=${{ secrets.API_KEY }}&date=$date"
             echo "Making request to: $api_url"
             
             response=$(curl -s -w "%{http_code}" -o response.json "$api_url")
